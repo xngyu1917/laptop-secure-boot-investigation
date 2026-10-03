@@ -1,8 +1,20 @@
 # 已确认事实
 
-更新日期：2026-10-03
+更新日期：2026-10-04
 
 本文件只放亲自观察到或截图能够直接支持的事实；推测放到其他文档。
+
+## 2026-10-04 新增确认
+
+- 本机 SMBIOS 型号为 COLORFUL P16 Pro；Windows 11 25H2，`26200.9457`；Disk 0 为 NVMe/GPT。
+- 用户管理员 PowerShell 读取 db，搜索 `Windows UEFI CA 2023` 返回 `True`。
+- db 中搜索 `Microsoft Windows Production PCA 2011` 返回 `True`；dbx 中同名搜索返回 `False`。这只记录名称搜索结果，未排除哈希撤销。
+- 实际 EFI 分区 `\EFI\Microsoft\Boot\bootmgfw.efi` 的 Authenticode 为 `Valid`，签发者为 `Windows UEFI CA 2023`。
+- `bcdedit /enum {bootmgr}` 指向 `\Device\HarddiskVolume2` 的上述文件；固件启动顺序将 Windows Boot Manager 放在 USB、光驱与网络之前。
+- Windows 注册表记录 `UEFISecureBootEnabled=0`、`UEFICA2023Status=Updated`、`AvailableUpdates=0`。
+- `Confirm-SecureBootUEFI`、`SetupMode`、PK 和 KEK 的管理员读取结果尚未回传，不能填入推测值。
+
+完整来源、日期和结论边界见 [最新调查报告](INVESTIGATION-2026-10-04.md)。以下为此前 BIOS 现场观察，保留其历史性质。
 
 ## 固件/硬件
 

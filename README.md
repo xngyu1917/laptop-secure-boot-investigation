@@ -4,6 +4,10 @@
 
 ## 当前结论
 
+**2026-10-04 最新调查：固件 db 已检出 Windows UEFI CA 2023，实际 EFI 分区的 Windows Boot Manager 已由该 CA 签发，Windows 签名检查为 Valid。根因仍未确定；“缺少 2023 证书”不再是首要假设。**
+
+CLI 继续排查时先读 [最新调查报告](docs/INVESTIGATION-2026-10-04.md)、[AGENTS.md](AGENTS.md) 和 [CLI-HANDOFF.txt](CLI-HANDOFF.txt)。下面保留此前 BIOS 观察和调查背景。
+
 问题已经明显缩小到 **UEFI Secure Boot 对 Windows EFI 启动链的信任/签名验证层**，而不是普通的“硬盘不存在”或“Windows 完全不是 UEFI 安装”。
 
 已经亲自验证：
@@ -38,6 +42,8 @@
 
 ## 当前工作假设
 
+本节列出此前提出的假设；2026-10-04 的证据已降低“单纯缺少 Windows UEFI CA 2023”以及旧启动文件尚未迁移的优先级。实际启动文件为 2023 签名。其他撤销规则、固件模式与密钥配置、后续启动链及 OEM 固件兼容性仍待核查。
+
 还没有最终证明根因。优先考虑：
 
 1. Windows Boot Manager 的签名链与固件当前 Secure Boot DB 不匹配；
@@ -71,6 +77,10 @@
 尤其不要清 TPM；设备若启用了 BitLocker/设备加密，可能触发恢复密钥要求。
 
 ## 下一步
+
+**当前下一步**：在管理员 CLI 下只读核对 `Confirm-SecureBootUEFI`、`SecureBoot`、`SetupMode`、`PK`、`KEK`，复查更新任务，再根据证据检查完整 db/dbx 和启动链。详见 [最新调查报告](docs/INVESTIGATION-2026-10-04.md)。
+
+以下 U 盘步骤保留为条件性恢复方案；目前尚未确认本机适用，不应直接据此执行：
 
 1. 在另一台正常 Windows 电脑上确认：
    `C:\Windows\Boot\EFI\SecureBootRecovery.efi`

@@ -12,7 +12,22 @@
 - 实际 EFI 分区 `\EFI\Microsoft\Boot\bootmgfw.efi` 的 Authenticode 为 `Valid`，签发者为 `Windows UEFI CA 2023`。
 - `bcdedit /enum {bootmgr}` 指向 `\Device\HarddiskVolume2` 的上述文件；固件启动顺序将 Windows Boot Manager 放在 USB、光驱与网络之前。
 - Windows 注册表记录 `UEFISecureBootEnabled=0`、`UEFICA2023Status=Updated`、`AvailableUpdates=0`。
-- `Confirm-SecureBootUEFI`、`SetupMode`、PK 和 KEK 的管理员读取结果尚未回传，不能填入推测值。
+- 第一阶段尚未取得 `Confirm-SecureBootUEFI`、`SetupMode`、PK 和 KEK 的管理员结果；第二阶段已由本机管理员读取补齐，见下文。
+
+## 2026-10-04 管理员取证新增确认
+
+- 执行进程的管理员 token 检查为 True；`Confirm-SecureBootUEFI=False`、`SecureBoot=00`、`SetupMode=00` 均来自成功读取。
+- PK/KEK/db/dbx 分别为 844 / 3066 / 9310 / 19996 字节；完整 EFI_SIGNATURE_LIST 解析分别得到 1 / 2 / 7 张 X.509 和 416 条 SHA-256 数据，未解析字节均为 0。
+- db 的实际 Windows UEFI CA 2023 DER 指纹已核对，Boot Manager 到该证书的签名关系验证通过；本轮 13 个相关 EFI 路径均通过 CMS 签名与 PE 摘要比对，未命中当前 dbx。
+- 当前仅枚举到 1 块物理磁盘、5 个分区、1 个 ESP。固件 `BootCurrent=0001`；`Boot0001` 的 GPT 分区签名、LBA 与 Disk 0 Partition 2 一致，指向 `\EFI\MICROSOFT\BOOT\BOOTMGFW.EFI`；卷设备映射到 `\Device\HarddiskVolume2`。
+- 实际 Boot Manager、备用 bootx64.efi、Windows EFI_EX 的 bootmgfw_EX.efi 整文件 SHA-256 相同，内部固定版本为 `10.0.28000.367`；普通 Windows EFI 副本为 2011 签名，但 PE Authenticode 摘要相同。Windows 版本显示文本与内部固定版本的差异已单独记录。
+- Secure-Boot-Update 任务存在、Enabled=True、SYSTEM、Ready，2026-10-04 05:21:57 +08:00 最近运行结果为 0。注册表仍为 Updated / AvailableUpdates=0；未读到对应 Error 值名。
+- 实际 Boot Manager 资源 SVN 为 11.0，本地待应用 DBXUpdateSVN 载荷也为 11.0；已读取的固件 dbx 未检出对应 Boot Manager SVN 记录。
+- 最近现存 TPM-WMI 1796 仍为 2026-08-15，错误 0x80070057；未建立其与当前故障的因果关系。
+- WinRE Enabled，位于 Partition 5，WIM 版本 `26100.9444`，内部实际引用的 winload.efi 可提取、验证。另有 OEM `RecoveryImage\install.wim`，版本 `26100.2314`，以及 COLORFUL 一键还原的菜单配置；尚未实启动或执行恢复。
+- BIOS/主板序列及产品识别编号字段中检到了 `V360…`，完整序列只保存在仓库外；尚未确认具体 Clevo 平台/固件适用性。
+- ESP 100 MiB 原始卷镜像的两次源读取和目标 SHA-256 一致；最终原样文件备份 149/149 校验通过。原始数据位置与早期工作副本的限制见最新报告。
+- 当前 Secure Boot 关闭；本阶段没有开启、重启或执行修复。静态结果不能证明开启后固件放行，也没有新确认历史故障仍复现。
 
 完整来源、日期和结论边界见 [最新调查报告](INVESTIGATION-2026-10-04.md)。以下为此前 BIOS 现场观察，保留其历史性质。
 

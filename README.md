@@ -4,11 +4,15 @@
 
 ## 当前结论
 
-**2026-10-04 最新调查：固件 db 已检出 Windows UEFI CA 2023，实际 EFI 分区的 Windows Boot Manager 已由该 CA 签发，Windows 签名检查为 Valid。根因仍未确定；“缺少 2023 证书”不再是首要假设。**
+**2026-10-04 管理员取证已执行：唯一 ESP、固件实际启动项与 BCD 路径一致；PK/KEK/db/dbx 全部完整解析，实际 Boot Manager 的 2023 签名、PE 摘要及到 db 的证书签名链验证通过，所检查文件未命中当前 dbx。根因仍未确定；没有证据支持直接用 BCDBoot 重建启动环境。**
+
+`SecureBoot=0`、`SetupMode=0`；Secure-Boot-Update 任务存在、已启用，今天最近运行返回 0。已在仓库外完成 ESP 的 100 MiB 原始镜像及 149/149 文件备份校验。实际 Boot Manager SVN 与本地待应用载荷均为 11.0，当前 dbx 未检出对应 SVN 条目。Windows 侧检查不能代替开启 Secure Boot 后的固件实测。
 
 CLI 继续排查时先读 [最新调查报告](docs/INVESTIGATION-2026-10-04.md)、[AGENTS.md](AGENTS.md) 和 [CLI-HANDOFF.txt](CLI-HANDOFF.txt)。下面保留此前 BIOS 观察和调查背景。
 
-问题已经明显缩小到 **UEFI Secure Boot 对 Windows EFI 启动链的信任/签名验证层**，而不是普通的“硬盘不存在”或“Windows 完全不是 UEFI 安装”。
+2026-10-04 临时任务见 [TEMP-TASK.md](TEMP-TASK.md)：**本轮八项检查与条件判断已完成**，任务文件已逐项勾选，列出备份位置和后续待确认事项，原任务正文保留供追溯。详细证据、读取错误和未实测事项见[报告的第二阶段](docs/INVESTIGATION-2026-10-04.md#第二阶段执行-temp-taskmd-的八项任务)。按任务条件，本轮未生成修复脚本、未执行修复或重启。WinRE 可读取，另发现 OEM 恢复映像与“一键还原”配置；尚未验证实际恢复行为。
+
+历史 A/B 测试将问题指向 **启用 UEFI Secure Boot 后的 Windows EFI 启动链验证过程**；当前取证未发现实际启动项目标错误或所检查 EFI 映像的 dbx 哈希撤销。历史故障是否仍可复现尚未得到本轮确认。
 
 已经亲自验证：
 
@@ -78,7 +82,7 @@ CLI 继续排查时先读 [最新调查报告](docs/INVESTIGATION-2026-10-04.md)
 
 ## 下一步
 
-**当前下一步**：在管理员 CLI 下只读核对 `Confirm-SecureBootUEFI`、`SecureBoot`、`SetupMode`、`PK`、`KEK`，复查更新任务，再根据证据检查完整 db/dbx 和启动链。详见 [最新调查报告](docs/INVESTIGATION-2026-10-04.md)。
+**当前下一步**：确认历史开启 enforcement 的故障是否仍可复现、期间是否改过设置，再结合原始启动项、证书指纹和 `V360…` 身份线索核实 OEM 固件适用性。变量、任务、数据库和本轮相关 EFI 文件的静态检查已完成；任何开启 Secure Boot/重启或具体修复仍须按项目边界另行明确授权。详见[最新调查报告](docs/INVESTIGATION-2026-10-04.md)。
 
 以下 U 盘步骤保留为条件性恢复方案；目前尚未确认本机适用，不应直接据此执行：
 

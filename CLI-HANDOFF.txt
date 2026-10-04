@@ -59,7 +59,7 @@ https://github.com/xngyu1917/laptop-secure-boot-investigation
 - 固件问题、其他撤销规则、启动链后续组件仍有可能，但根因没有证实。
 - 仅追加2023证书的 SecureBootRecovery.efi U盘方案目前不是优先步骤。
 
-下一项未完成检查：
+第一阶段当时的下一项未完成检查（已由下方管理员阶段补齐）：
 在确认 CLI 子进程实际拥有管理员 token 后，只读执行 Confirm-SecureBootUEFI，以及 Get-SecureBootUEFI -Name SecureBoot, SetupMode, PK, KEK（每个变量独立读取，报告名称/字节数；SecureBoot/SetupMode显示第一个字节）。此前用户只贴出了 bcdedit 的输出，没有提供这些变量结果。当前关闭Secure Boot时Confirm返回False是预期。
 随后根据证据考虑结构化检查db/dbx、完整EFI启动链、OEM固件兼容性。读取失败必须保留错误，不能用空值制造“缺证书”结论。
 
@@ -77,3 +77,17 @@ https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/oem
 https://learn.microsoft.com/en-us/powershell/module/secureboot/get-securebootuefi
 https://learn.chatgpt.com/docs/developer-commands
 七彩虹官方页面搜索有“windows证书更新说明”，但页面访问超时/502，没有验证适用于本机的更新包，不能声称已找到适用BIOS。
+
+2026-10-04 10:05 管理员阶段续接更新：
+用户本轮要求读取项目最新任务并执行；实际执行范围为 TEMP-TASK.md 的八项取证与条件判断，不是 TASK_FOR_CODEX.md 的恢复 U 盘开发。
+管理员 token=True，PowerShell 7.6.6。Confirm=False、SecureBoot=00、SetupMode=00；PK/KEK/db/dbx 全部读取并完整解析成功。db 有 7 张 X.509；dbx 是 416 条 SHA-256 数据，无未知类型或未解析字节。本轮相关 EFI 文件未命中 dbx；Boot Manager 到 db 中 Windows UEFI CA 2023 的证书签名关系已验证。
+只有 Disk0 的 1 个 ESP；BootCurrent=0001，Boot0001 的 GPT 签名/LBA/路径与 Disk0 Partition2 一致。主 bootmgfw、备用 bootx64、Windows EFI_EX bootmgfw_EX 的整文件完全相同，固定版本28000.367、SVN11.0。普通 Windows EFI 副本为2011签名但PE摘要相同；旧的FileVersionInfo显示文本不能当成内部固定版本。
+Secure-Boot-Update 任务存在、已启用、SYSTEM/Ready，2026-10-04 05:21:57+08:00 最近运行结果0；先前非管理员未找到任务的观察不再代表当前状态。注册表Updated/AvailableUpdates=0，未取得Error值名。1796最新仍为8月15日历史记录。
+本地待应用DBXUpdateSVN载荷11.0，固件dbx未检出Boot Manager对应SVN记录；待应用不等于已应用。
+WinRE配置与文件可读，WIM26100.9444，实际恢复winload签名/摘要通过；OEM恢复WIM26100.2314和COLORFUL一键还原配置存在，未实启动。
+完整原始证据和备份目录：
+C:\Users\shijie\AppData\Local\SecureBootInvestigation\20261004-095323-bdd7379f
+先读该目录READ-ME-FIRST.txt。原样备份用ESP-Backups\Disk0-Partition2.img和ESP-Backups\Disk0-Partition2-Verified；149/149文件通过，100MiB镜像两次源读取与目标SHA256一致。
+ESP-Backups\Disk0-Partition2是早期分析工作副本，bcdedit /store枚举改写了该工作副本的BCD/日志，不能作为最终原样备份。没有将这个改写写回真实ESP。
+原始硬件标识/固件/BCD未加入仓库。V360…仅见于序列字段，不是已核实的Clevo子平台。
+TEMP-TASK第八项判断不支持ESP/BCD修复，因此未生成BCDBoot修复脚本，未执行修复、密钥变更、任务/注册表修改或重启。后续先确认历史开启enforcement失败目前是否仍复现，再核实OEM配置/实现及尚未检查的策略/组件。详细证据、错误和边界以docs/INVESTIGATION-2026-10-04.md第二阶段为准。

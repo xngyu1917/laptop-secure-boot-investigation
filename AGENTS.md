@@ -4,12 +4,12 @@
 
 ## 从哪里继续
 
-1. 先读 `docs/INVESTIGATION-2026-10-04.md`，这是截至 2026-10-04 的最新调查报告。
+1. 先读 `docs/INVESTIGATION-2026-10-05.md`，这是最新现场复测；再读 `docs/INVESTIGATION-2026-10-04.md` 获取此前完整管理员静态取证。
 2. 再读 `CLI-HANDOFF.txt`，其中保留本机路径、已运行命令和调查背景。
 3. `docs/CONFIRMED.md` 包含历史 BIOS 观察与新确认事实。
-4. `docs/RECOVERY-PLAN.md` 是有适用条件的恢复方案。实际 EFI 启动文件已由 Windows UEFI CA 2023 签发，固件 db 也检出了这张证书；不能继续假设本机只是缺少该证书。
+4. `docs/RECOVERY-PLAN.md` 是有适用条件的历史恢复方案。实际 EFI 启动文件已由 Windows UEFI CA 2023 签发，固件 db 也检出了这张证书；2026-10-05 又确认独立 EFI USB 在 enforcement 开启时同样 boot failed，因此不要把“补 2023 CA”或单个 Windows EFI 文件当作首要修复。
 5. `TASK_FOR_CODEX.md` 是此前拟议的 U 盘工具开发任务。只有用户请求制作工具时才实施；阅读它不代表授权运行恢复工具。
-6. `TEMP-TASK.md` 的 2026-10-04 八项取证与条件判断已完成，执行记录逐项勾选并列出后续待确认事项；先读其执行状态与最新报告，复用已有证据，不把保留的原任务正文当成待执行清单。故障根因尚未确定，修复未执行。
+6. `TEMP-TASK.md` 的 2026-10-04 八项取证与条件判断已完成。2026-10-05 已重新实测 Secure Boot ON/OFF，并加入 USB 对照；不要再次把“确认故障是否仍可复现”当成待办。故障根因尚未唯一确定，当前优先转 OEM BIOS/EC 与 Secure Boot 数据库恢复适用性。
 
 ## 排查与记录
 

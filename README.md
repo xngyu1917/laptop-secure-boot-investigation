@@ -4,15 +4,15 @@
 
 ## 当前结论
 
-**2026-10-04 管理员取证已执行：唯一 ESP、固件实际启动项与 BCD 路径一致；PK/KEK/db/dbx 全部完整解析，实际 Boot Manager 的 2023 签名、PE 摘要及到 db 的证书签名链验证通过，所检查文件未命中当前 dbx。根因仍未确定；没有证据支持直接用 BCDBoot 重建启动环境。**
+**2026-10-05 现场复测进一步收窄范围：Windows 已重新安装但故障不变；Enforce Secure Boot 关闭时内部 Windows 与 Windows 安装 EFI USB 均可启动，开启并保存重启后，内部 Windows Boot Manager 与独立 EFI USB 均直接 `boot failed`。结合 2026-10-04 的管理员静态取证，当前更应优先怀疑固件执行 Secure Boot 验证时的兼容性/状态问题，而不是单一 Windows、BCD、ESP 或 `bootmgfw.efi` 故障。**
 
-`SecureBoot=0`、`SetupMode=0`；Secure-Boot-Update 任务存在、已启用，今天最近运行返回 0。已在仓库外完成 ESP 的 100 MiB 原始镜像及 149/149 文件备份校验。实际 Boot Manager SVN 与本地待应用载荷均为 11.0，当前 dbx 未检出对应 SVN 条目。Windows 侧检查不能代替开启 Secure Boot 后的固件实测。
+此前管理员取证已确认：唯一 ESP、固件实际启动项与 BCD 路径一致；PK/KEK/db/dbx 全部完整解析，实际 Boot Manager 的 Windows UEFI CA 2023 签名、PE 摘要及到 db 的证书签名链验证通过，所检查文件未命中当前 dbx；Boot Manager SVN 也已检查。BIOS 现场 DB 页面同时直接显示 Windows UEFI CA 2023、Microsoft UEFI CA 2023 等条目。因此“单纯缺少 2023 CA”已明显降低优先级。
 
-CLI 继续排查时先读 [最新调查报告](docs/INVESTIGATION-2026-10-04.md)、[AGENTS.md](AGENTS.md) 和 [CLI-HANDOFF.txt](CLI-HANDOFF.txt)。下面保留此前 BIOS 观察和调查背景。
+CLI 继续排查时先读 [最新现场复测](docs/INVESTIGATION-2026-10-05.md)、[2026-10-04 管理员调查](docs/INVESTIGATION-2026-10-04.md)、[AGENTS.md](AGENTS.md) 和 [CLI-HANDOFF.txt](CLI-HANDOFF.txt)。
 
 2026-10-04 临时任务见 [TEMP-TASK.md](TEMP-TASK.md)：**本轮八项检查与条件判断已完成**，任务文件已逐项勾选，列出备份位置和后续待确认事项，原任务正文保留供追溯。详细证据、读取错误和未实测事项见[报告的第二阶段](docs/INVESTIGATION-2026-10-04.md#第二阶段执行-temp-taskmd-的八项任务)。按任务条件，本轮未生成修复脚本、未执行修复或重启。WinRE 可读取，另发现 OEM 恢复映像与“一键还原”配置；尚未验证实际恢复行为。
 
-历史 A/B 测试将问题指向 **启用 UEFI Secure Boot 后的 Windows EFI 启动链验证过程**；当前取证未发现实际启动项目标错误或所检查 EFI 映像的 dbx 哈希撤销。历史故障是否仍可复现尚未得到本轮确认。
+2026-10-05 已重新确认历史故障仍可复现，并增加独立 EFI USB 对照：**Secure Boot OFF 时 Windows/USB 均可启动；Secure Boot ON 时 Windows/USB 均 boot failed。** 这把范围进一步从“Windows EFI 启动链”收窄到固件 Secure Boot enforcement 的共同验证层。
 
 已经亲自验证：
 
@@ -34,6 +34,11 @@ CLI 继续排查时先读 [最新调查报告](docs/INVESTIGATION-2026-10-04.md)
   - `Windows Boot Manager boot failed.`
   - 随后 `Default Boot Device Missing or Boot Failed.`
 - 把 `Enforce Secure Boot` 改回 Disabled 后，Windows 可以恢复正常启动。
+- 2026-10-05 使用独立 EFI USB 复测：
+  - `Enforce Secure Boot = Disabled`：USB 可启动；
+  - `Enforce Secure Boot = Enabled`：固件显示 `EFI USB Device (VendorCoProductCode) boot failed.`。
+- BIOS `DB Options` 现场显示 7 个 PKCS7 条目，其中包括 `Microsoft Windows Production PCA 2011`、`Windows UEFI CA 2023`、`Microsoft UEFI CA 2023`、`Microsoft Option ROM UEFI CA 2023`；`DBX Options` 显示大量 SHA256 撤销项。
+- `Select a UEFI file as trusted for execution` 明确说明会把指定 EFI image hash 加入 allowed database；本轮没有执行该写入。
 - 在 `Select a UEFI file as trusted for execution` 文件浏览器中能看到：
   - `bootmgfw.efi`
   - `bootmgr.efi`
@@ -48,11 +53,13 @@ CLI 继续排查时先读 [最新调查报告](docs/INVESTIGATION-2026-10-04.md)
 
 本节列出此前提出的假设；2026-10-04 的证据已降低“单纯缺少 Windows UEFI CA 2023”以及旧启动文件尚未迁移的优先级。实际启动文件为 2023 签名。其他撤销规则、固件模式与密钥配置、后续启动链及 OEM 固件兼容性仍待核查。
 
-还没有最终证明根因。优先考虑：
+还没有最终证明根因。当前优先级调整为：
 
-1. Windows Boot Manager 的签名链与固件当前 Secure Boot DB 不匹配；
-2. Windows 已经处于 2011 → 2023 Secure Boot 证书迁移的一部分状态，但固件 DB/KEK 未正确同步；
-3. OEM/Insyde 固件对 DB 更新、追加或恢复默认值的行为存在兼容问题。
+1. OEM/Insyde 固件实际执行 Secure Boot 验证时的兼容性或运行时状态问题；
+2. 当前 PK/KEK/db/dbx/相关安全变量的组合需要 OEM 认可的恢复或重新初始化；
+3. 2011 → 2023 Secure Boot 迁移与该 BIOS/EC 版本之间存在 OEM 兼容问题。
+
+单纯“内部 Windows Boot Manager 不受信任”已降低优先级，因为独立 EFI USB 在 enforcement 开启时也被同一固件拒绝。
 
 **不要把“2011 → 2023 迁移”写成已确认根因。**
 
@@ -82,7 +89,7 @@ CLI 继续排查时先读 [最新调查报告](docs/INVESTIGATION-2026-10-04.md)
 
 ## 下一步
 
-**当前下一步**：确认历史开启 enforcement 的故障是否仍可复现、期间是否改过设置，再结合原始启动项、证书指纹和 `V360…` 身份线索核实 OEM 固件适用性。变量、任务、数据库和本轮相关 EFI 文件的静态检查已完成；任何开启 Secure Boot/重启或具体修复仍须按项目边界另行明确授权。详见[最新调查报告](docs/INVESTIGATION-2026-10-04.md)。
+**当前下一步**：联系 COLORFUL/OEM，携带 BIOS `1.07.05COLO3`、KBC/EC `1.09.04CF1`、ME `16.1.32.2473` 与 Windows/USB 的 Secure Boot ON/OFF A/B 结果，确认是否存在准确匹配本机的新版 BIOS/EC、Secure Boot/2023 证书兼容修复，以及 OEM 是否建议执行 `Restore Secure Boot to Factory Settings`。在得到 OEM 确认前，不执行 Erase Keys、删除 DBX、手工 trust EFI 或交叉刷其他机型固件。详见[最新现场复测](docs/INVESTIGATION-2026-10-05.md)。
 
 以下 U 盘步骤保留为条件性恢复方案；目前尚未确认本机适用，不应直接据此执行：
 

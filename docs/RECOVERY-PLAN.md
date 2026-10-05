@@ -1,10 +1,18 @@
 # 恢复方案（条件性备选）
 
+## 2026-10-05 适用性再次下调
+
+新的现场 A/B 已确认：`Enforce Secure Boot = Enabled` 时，不仅内部 Windows Boot Manager 启动失败，独立 EFI USB 也直接 `boot failed`；关闭 enforcement 后两者可启动。BIOS DB 页面同时直接显示 Windows UEFI CA 2023、Microsoft UEFI CA 2023 等证书。
+
+因此，本页的 `SecureBootRecovery.efi` / “补 Windows UEFI CA 2023”路线进一步降低优先级。当前优先级改为：**先联系 COLORFUL/OEM，确认准确匹配本机的新版 BIOS/EC、Secure Boot/2023 证书兼容修复，以及是否应由 OEM 指导执行 Restore Secure Boot to Factory Settings。**
+
+在 OEM 明确建议前，不执行 Erase Keys、删除 DBX、手工 trust 单个 EFI 文件或恢复 factory keys。
+
 ## 2026-10-04 适用性更新
 
 固件 db 已检出 Windows UEFI CA 2023，实际 EFI 分区的 `bootmgfw.efi` 已由该 CA 签发，Windows Authenticode 检查为 `Valid`。因此，本页“追加 2023 证书”的方案目前应降低优先级，不是已经确认适用于本机的修复。
 
-先按 [最新调查报告](INVESTIGATION-2026-10-04.md) 完成只读诊断。以下保留微软恢复工具的历史方案；只有进一步证据确认适用、且用户授权具体恢复操作后再执行。
+先按 [2026-10-04 管理员调查](INVESTIGATION-2026-10-04.md) 完成只读诊断。以下保留微软恢复工具的历史方案；只有进一步证据确认适用、且用户授权具体恢复操作后再执行。
 
 ## 目标
 

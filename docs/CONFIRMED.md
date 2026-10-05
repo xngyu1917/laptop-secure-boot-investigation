@@ -1,8 +1,32 @@
 # 已确认事实
 
-更新日期：2026-10-04
+更新日期：2026-10-05
 
 本文件只放亲自观察到或截图能够直接支持的事实；推测放到其他文档。
+
+## 2026-10-05 现场复测新增确认
+
+- 用户已完成一次新的 Windows 安装；随后再次开启 `Enforce Secure Boot`，内部 Windows Boot Manager 仍启动失败。
+- `Enforce Secure Boot = Disabled` 时，内部 Windows 可正常启动。
+- 保存 `Enforce Secure Boot = Enabled` 并重启后，内部 Windows Boot Manager 仍出现 boot failed。
+- Boot Manager 中能同时看到内部 `Windows Boot Manager (... YMTC PC4...)` 与 `EFI USB Device (VendorCoProductCode)`。
+- 在 Secure Boot enforcement 开启状态下手动选择该 USB，固件直接显示 `EFI USB Device (VendorCoProductCode) boot failed.`。
+- 用户确认该 USB 在 enforcement 关闭时可用于正常启动/安装 Windows。
+- 因此已现场形成新的 A/B：**Secure Boot OFF 时 Windows/USB 均可启动；Secure Boot ON 时 Windows/USB 均被拒绝。**
+- BIOS `DB Options` 现场直接显示 7 个 PKCS7 条目：
+  1. `Microsoft Windows Production PCA 2011`
+  2. `Windows UEFI CA 2023`
+  3. `Microsoft Corporation UEFI CA 2011`
+  4. `Microsoft UEFI CA 2023`
+  5. `Microsoft Option ROM UEFI CA 2023`
+  6. `Secure Certificate`
+  7. `Cus CA`
+- `DBX Options` 现场显示多条 `[SHA256]` 撤销项并可滚动；本轮没有删除或新增任何 DBX 项。
+- Secure Boot 管理页还可见 `KEK Options`、`DBT Options`、`DBR Options`。
+- `Select a UEFI file as trusted for execution` 的页面说明为 `Add specific EFI image hash to allowed database.`；本轮没有执行该写入。
+- 本轮没有执行 `Erase all Secure Boot Settings`、`Restore Secure Boot to Factory Settings`、手工删除/新增 PK/KEK/db/dbx，也没有刷 BIOS/EC。
+
+完整的新现场复测和结论边界见 [INVESTIGATION-2026-10-05.md](INVESTIGATION-2026-10-05.md)。
 
 ## 2026-10-04 新增确认
 
@@ -29,7 +53,7 @@
 - ESP 100 MiB 原始卷镜像的两次源读取和目标 SHA-256 一致；最终原样文件备份 149/149 校验通过。原始数据位置与早期工作副本的限制见最新报告。
 - 当前 Secure Boot 关闭；本阶段没有开启、重启或执行修复。静态结果不能证明开启后固件放行，也没有新确认历史故障仍复现。
 
-完整来源、日期和结论边界见 [最新调查报告](INVESTIGATION-2026-10-04.md)。以下为此前 BIOS 现场观察，保留其历史性质。
+完整来源、日期和结论边界见 [2026-10-04 管理员调查](INVESTIGATION-2026-10-04.md)。以下为此前 BIOS 现场观察，保留其历史性质。
 
 ## 固件/硬件
 

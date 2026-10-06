@@ -2,6 +2,19 @@
 
 更新日期：2026-10-06。根因未确定。本文件区分截图、用户反馈和历史报告，不把上一位 AI 的解释写成已验证结果。最新完整过程见 [10-06 现场记录](INVESTIGATION-2026-10-06.md)。
 
+## 新实测：当前安装 USB（Codex，2026-10-06）
+
+详见 [Codex 只读检查记录](USB-CHECK-2026-10-06.md)。检查在另一台 ASUS 台式机执行，当前 token 非管理员；不是重新测量 COLORFUL 的固件状态。
+
+- Disk 2 为 USB / MBR、VendorCo ProductCode、62,914,560,000 字节；当前 G: 为 ESD-USB / FAT32 / Removable，卷容量 34,347,155,456 字节。
+- 可读取的六个 EFI 文件 Authenticode 状态均为 Valid，显示 Microsoft Windows Production PCA 2011 签发。
+- 默认入口 `EFI\\Boot\\bootx64.efi` 与根目录 `bootmgr.efi` 的 PE Certificate Table 各有 1 项，嵌套签名属性数为 0；这两个对象明确为单一 2011 签名，未发现附加 2023 签名。
+- 默认入口与根目录 `bootmgfw.efi` 整文件 SHA-256 相同；完整数值、大小及版本见实测记录。整文件哈希不等于 BIOS 登记摘要。
+- BCD 查询返回 Access is denied、退出码 1；未检查 boot.wim 内的完整后续链，没有本轮实际启动 / OFF-ON 对照，也没有改写介质。
+- 尚未确认此前失败的 USB 就是本次对象且期间没有改写。当前签名事实不直接回填为旧测试当时的签名；也不代表已完成 2023 安装盘对照。
+
+下列“本轮”段落保留为此前 BIOS 操作的来源记录。
+
 ## 本轮：截图直接可见
 
 | 阶段 | 可直接核对的内容 |

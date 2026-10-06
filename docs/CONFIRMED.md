@@ -1,145 +1,77 @@
-# 已确认事实
+# 已观察事实索引
 
-更新日期：2026-10-05
+更新日期：2026-10-06。根因未确定。本文件区分截图、用户反馈和历史报告，不把上一位 AI 的解释写成已验证结果。最新完整过程见 [10-06 现场记录](INVESTIGATION-2026-10-06.md)。
 
-本文件只放亲自观察到或截图能够直接支持的事实；推测放到其他文档。
+## 本轮：截图直接可见
 
-## 2026-10-05 现场复测新增确认
+| 阶段 | 可直接核对的内容 |
+|---|---|
+| 清除选项 | Erase all Secure Boot Settings 被设为 Enabled；帮助说明列出 PK、KEK、db、dbx；当时 Enforce 与 Restore 均为 Disabled |
+| 清除后返回 | Database=Unlocked；Status=Disabled；User Customized Security=YES；Enforce 灰色；Erase 回到 Disabled |
+| 恢复后第一次测试 | 照片显示 Windows Boot Manager boot failed，随后默认启动设备失败；再次访问安全设置时出现“本轮启动过设备，需重启直接进入菜单”的提示 |
+| 恢复后、手工添加前的 DB | 页面显示 7 个 PKCS7 名称，其中有 Windows UEFI CA 2023，完整名称见下文 |
+| 文件浏览 | 可见 EFI 下 Boot 和 Microsoft 并列；EFI\Boot 内有 bootx64.efi；沿 Microsoft\Boot 进入后照片选中 bootmgfw.efi |
+| 单次信任后回看 DB | 出现第08条 SHA256，前缀 F2 35 CD 21 C9 19 E0 5D A1 21 8E 8D 13 42 4F ... |
+| 再次添加 | 出现 There is already an identical signature in signature list；该次完整选中文件路径未显示 |
+| 追加更多条目后 | 最后一张 DB 照片列出前7条证书名称及08～14共7条可见 SHA256；不是已逐项核实名称的7个文件清单 |
 
-- 用户已完成一次新的 Windows 安装；随后再次开启 `Enforce Secure Boot`，内部 Windows Boot Manager 仍启动失败。
-- `Enforce Secure Boot = Disabled` 时，内部 Windows 可正常启动。
-- 保存 `Enforce Secure Boot = Enabled` 并重启后，内部 Windows Boot Manager 仍出现 boot failed。
-- Boot Manager 中能同时看到内部 `Windows Boot Manager (... YMTC PC4...)` 与 `EFI USB Device (VendorCoProductCode)`。
-- 在 Secure Boot enforcement 开启状态下手动选择该 USB，固件直接显示 `EFI USB Device (VendorCoProductCode) boot failed.`。
-- 用户确认该 USB 在 enforcement 关闭时可用于正常启动/安装 Windows。
-- 因此已现场形成新的 A/B：**Secure Boot OFF 时 Windows/USB 均可启动；Secure Boot ON 时 Windows/USB 均被拒绝。**
-- BIOS `DB Options` 现场直接显示 7 个 PKCS7 条目：
-  1. `Microsoft Windows Production PCA 2011`
-  2. `Windows UEFI CA 2023`
-  3. `Microsoft Corporation UEFI CA 2011`
-  4. `Microsoft UEFI CA 2023`
-  5. `Microsoft Option ROM UEFI CA 2023`
-  6. `Secure Certificate`
-  7. `Cus CA`
-- `DBX Options` 现场显示多条 `[SHA256]` 撤销项并可滚动；本轮没有删除或新增任何 DBX 项。
-- Secure Boot 管理页还可见 `KEK Options`、`DBT Options`、`DBR Options`。
-- `Select a UEFI file as trusted for execution` 的页面说明为 `Add specific EFI image hash to allowed database.`；本轮没有执行该写入。
-- 本轮没有执行 `Erase all Secure Boot Settings`、`Restore Secure Boot to Factory Settings`、手工删除/新增 PK/KEK/db/dbx，也没有刷 BIOS/EC。
+本轮 DB 页面显示的 7 个证书名称：
 
-完整的新现场复测和结论边界见 [INVESTIGATION-2026-10-05.md](INVESTIGATION-2026-10-05.md)。
+1. Microsoft Windows Production PCA 2011
+2. Windows UEFI CA 2023
+3. Microsoft Corporation UEFI CA 2011
+4. Microsoft UEFI CA 2023
+5. Microsoft Option ROM UEFI CA 2023
+6. Secure Certificate
+7. Cus CA
 
-## 2026-10-04 新增确认
+这是界面名称记录；没有本轮新导出的证书内容、指纹或完整 dbx 数据。
 
-- 本机 SMBIOS 型号为 COLORFUL P16 Pro；Windows 11 25H2，`26200.9457`；Disk 0 为 NVMe/GPT。
-- 用户管理员 PowerShell 读取 db，搜索 `Windows UEFI CA 2023` 返回 `True`。
-- db 中搜索 `Microsoft Windows Production PCA 2011` 返回 `True`；dbx 中同名搜索返回 `False`。这只记录名称搜索结果，未排除哈希撤销。
-- 实际 EFI 分区 `\EFI\Microsoft\Boot\bootmgfw.efi` 的 Authenticode 为 `Valid`，签发者为 `Windows UEFI CA 2023`。
-- `bcdedit /enum {bootmgr}` 指向 `\Device\HarddiskVolume2` 的上述文件；固件启动顺序将 Windows Boot Manager 放在 USB、光驱与网络之前。
-- Windows 注册表记录 `UEFISecureBootEnabled=0`、`UEFICA2023Status=Updated`、`AvailableUpdates=0`。
-- 第一阶段尚未取得 `Confirm-SecureBootUEFI`、`SetupMode`、PK 和 KEK 的管理员结果；第二阶段已由本机管理员读取补齐，见下文。
+## 本轮：用户明确反馈，未全部留图
 
-## 2026-10-04 管理员取证新增确认
+用户报告按清除／恢复流程操作并重启；恢复后安全启动已自动开启。首次失败后说已关闭安全启动。之后报告对 bootmgfw.efi 的添加确认框点击 Yes、开启安全启动测试仍失败；再添加更多项目后又回复“失败”。
 
-- 执行进程的管理员 token 检查为 True；`Confirm-SecureBootUEFI=False`、`SecureBoot=00`、`SetupMode=00` 均来自成功读取。
-- PK/KEK/db/dbx 分别为 844 / 3066 / 9310 / 19996 字节；完整 EFI_SIGNATURE_LIST 解析分别得到 1 / 2 / 7 张 X.509 和 416 条 SHA-256 数据，未解析字节均为 0。
-- db 的实际 Windows UEFI CA 2023 DER 指纹已核对，Boot Manager 到该证书的签名关系验证通过；本轮 13 个相关 EFI 路径均通过 CMS 签名与 PE 摘要比对，未命中当前 dbx。
-- 当前仅枚举到 1 块物理磁盘、5 个分区、1 个 ESP。固件 `BootCurrent=0001`；`Boot0001` 的 GPT 分区签名、LBA 与 Disk 0 Partition 2 一致，指向 `\EFI\MICROSOFT\BOOT\BOOTMGFW.EFI`；卷设备映射到 `\Device\HarddiskVolume2`。
-- 实际 Boot Manager、备用 bootx64.efi、Windows EFI_EX 的 bootmgfw_EX.efi 整文件 SHA-256 相同，内部固定版本为 `10.0.28000.367`；普通 Windows EFI 副本为 2011 签名，但 PE Authenticode 摘要相同。Windows 版本显示文本与内部固定版本的差异已单独记录。
-- Secure-Boot-Update 任务存在、Enabled=True、SYSTEM、Ready，2026-10-04 05:21:57 +08:00 最近运行结果为 0。注册表仍为 Updated / AvailableUpdates=0；未读到对应 Error 值名。
-- 实际 Boot Manager 资源 SVN 为 11.0，本地待应用 DBXUpdateSVN 载荷也为 11.0；已读取的固件 dbx 未检出对应 Boot Manager SVN 记录。
-- 最近现存 TPM-WMI 1796 仍为 2026-08-15，错误 0x80070057；未建立其与当前故障的因果关系。
-- WinRE Enabled，位于 Partition 5，WIM 版本 `26100.9444`，内部实际引用的 winload.efi 可提取、验证。另有 OEM `RecoveryImage\install.wim`，版本 `26100.2314`，以及 COLORFUL 一键还原的菜单配置；尚未实启动或执行恢复。
-- BIOS/主板序列及产品识别编号字段中检到了 `V360…`，完整序列只保存在仓库外；尚未确认具体 Clevo 平台/固件适用性。
-- ESP 100 MiB 原始卷镜像的两次源读取和目标 SHA-256 一致；最终原样文件备份 149/149 校验通过。原始数据位置与早期工作副本的限制见最新报告。
-- 当前 Secure Boot 关闭；本阶段没有开启、重启或执行修复。静态结果不能证明开启后固件放行，也没有新确认历史故障仍复现。
+首次恢复后的失败有照片。单次手工信任及最终多条目后的失败是文字反馈，没有各自的新报错照片／日志。不要把助手反复复述的同一句报错当作多份独立证据。
 
-完整来源、日期和结论边界见 [2026-10-04 管理员调查](INVESTIGATION-2026-10-04.md)。以下为此前 BIOS 现场观察，保留其历史性质。
+最后失败之后是否已关闭安全启动、是否能进 Windows、是否清理新增条目，尚未收到确认。助手给出的收尾建议不是操作记录。
 
-## 固件/硬件
+## 本轮没有重新确认
 
-- Insyde H2O BIOS。
-- BIOS Version: `1.07.05COL03`
-- KBC/EC Version: `1.09.04CF1`
-- ME FW Version: `16.1.32.2473`
-- CPU: Intel Core i9-13900HX
-- Memory Size: 16384 MB
-- DRAM Frequency: 5600 MHz
+没有逐项证明清除后的四库为空；没有实测 SetupMode；没有恢复前后原始字节比较；没有当前完整启动项／分区身份复核；没有新增哈希与当前文件的独立完整摘要比对；没有重新检查当前 dbx、所有策略或所有启动环节。
 
-> 对话里曾提到“14900HX + RTX 5060”的新机设想/对比，但本次 BIOS 截图实际显示的是 **i9-13900HX**。不要把两者混写。
+没有本轮已核实签名的 Win10 安装 U 盘对照结果。没有运行恢复工具、再次重装、刷 BIOS/EC 或清 TPM 的新记录。用户称没有设备加密，未提供本轮独立状态检查。
 
-## TPM
+## 历史：2026-10-05 Windows／USB 对照
 
-Security -> TPM Configuration 页面：
+来源：[10-05 历史报告](INVESTIGATION-2026-10-05.md)。
 
-- `TPM2.0 Device Found`
-- `Clear TPM = Disabled`
+- 用户报告已重装过 Windows，问题仍然存在。
+- 关闭 Enforce 时内部 Windows 可启动；开启并保存重启后，Windows Boot Manager 启动失败。
+- 同一安装 USB 关闭时可启动／安装，开启时出现 EFI USB Device (VendorCoProductCode) boot failed。
+- 当时 DB 页面显示上述 7 个名称，DBX 页面可见多条 SHA256。
+- 当日记录没有执行清除、恢复默认或有完整记录的手工添加。本轮已经进行了这些新操作，不能继续把它们列为“从未试过”。
 
-本次调查没有执行 Clear TPM。
+旧 USB 的实际入口、制作方式和签名版本未完整固定；不把该对照扩大为所有 EFI 程序均不能启动。
 
-## Secure Boot 初始状态
+## 历史：2026-10-04 管理员检查
 
-Administer Secure Boot 页面：
+来源：[10-04 管理员报告第二阶段](INVESTIGATION-2026-10-04.md#第二阶段执行-temp-taskmd-的八项任务)。下列值仅代表当时的测量，本轮没有重新取得相同输出。
 
-- `Secure Boot Database = Installed and Locked`
-- `Secure Boot Status = Disabled`
-- `User Customized Security = NO`
-- `Enforce Secure Boot = Disabled`
-- `Erase all Secure Boot Settings = Disabled`
-- `Restore Secure Boot to Factory Settings = Disabled`
-- 存在 `PK Options`
+| 项目 | 当日报告记录 |
+|---|---|
+| 管理员与状态 | 管理员 token=True；Confirm-SecureBootUEFI=False；SecureBoot=00；SetupMode=00 |
+| 数据库 | PK/KEK/db/dbx 为 844/3066/9310/19996 字节；四库解析没有剩余字节；分别有1/2/7张 X.509 和416条 SHA256 |
+| 启动路径 | 1块物理磁盘、5分区、1个 ESP；BootCurrent=0001，Boot0001、GPT/LBA、Disk0 Partition2、BCD 指向对应的 EFI\Microsoft\Boot\bootmgfw.efi |
+| 文件验证 | 13个相关 EFI 路径的 CMS 签名与 PE 摘要检查通过；实际 Boot Manager 与 db 中 Windows UEFI CA 2023 的签名关系验证通过；所查对象未匹配当时 dbx |
+| 文件一致性 | 实际 bootmgfw.efi、备用 bootx64.efi 与 Windows EFI_EX 副本整文件相同；普通 Windows EFI 副本整文件不同但 PE 摘要相同；不把这两种哈希混用 |
+| SVN 与日志 | Boot Manager SVN=11.0；本地待应用载荷也是11.0；当时 dbx 未检出相应 SVN 记录；历史1796最近为2026-08-15，错误0x80070057，未建立启动故障因果关系 |
+| 更新任务 | Secure-Boot-Update 存在且启用，最近结果0；注册表 Updated/AvailableUpdates=0；这些不等于固件启动已验证 |
+| 恢复与备份 | WinRE 配置／文件和 OEM 恢复资源可读取，未实启动；100 MiB ESP 镜像及149/149原样文件备份校验通过，备份位于同一SSD，原始数据未上传 |
 
-## 关键 A/B 测试
+原始证据路径、各文件的完整哈希、早期工作副本被分析工具改写的限制及读取错误，保留在原报告与 [历史 CLI 交接](CLI-HANDOFF-2026-10-04.txt)。本轮未检查备份是否仍存在，不覆盖或重新解释旧输出。
 
-### Enforce Secure Boot = Disabled
+## 设备及其他历史观察
 
-Windows 可以正常启动。
+历史身份为 COLORFUL P16 Pro、i9-13900HX、16GB，BIOS 原文 1.07.05COLO3、KBC/EC 1.09.04CF1、ME 16.1.32.2473；旧手抄有 O/0 差异。V360…只是在身份字段中的历史线索，不是已核实的子平台。TPM 页面曾显示 TPM2.0 Device Found 和 Clear TPM=Disabled。
 
-### Enforce Secure Boot = Enabled
-
-保存并重启后出现：
-
-`Windows Boot Manager boot failed.`
-
-随后出现：
-
-`Default Boot Device Missing or Boot Failed.
-Insert Recovery Media and Hit any key
-Then Select 'Boot Manager' to choose a new Boot Device or to Boot Recovery Media`
-
-因此可以确认：
-
-- 固件能看到/尝试 Windows Boot Manager；
-- 一旦 Secure Boot enforcement 生效，Windows 启动路径被拒绝；
-- 关闭 enforcement 后系统可恢复启动。
-
-这使“普通 SSD 完全不识别”或“根本没有 Windows Boot Manager”变得不符合现象。
-
-## Secure Boot 菜单的启动周期限制
-
-失败启动后再进入管理页，会显示：
-
-`The operation is only allowed before booting any boot device!!! Please reset system and enter this menu directly if need use this operation.`
-
-彻底重启并在尝试任何 boot device 之前直接进入 BIOS/Secure Boot 菜单，可以再次修改。
-
-## EFI 文件浏览器
-
-在：
-
-`Administer Secure Boot -> Select a UEFI file as trusted for execution`
-
-可见：
-
-- `bootmgfw.efi`
-- `bootmgr.efi`
-- `memtest.efi`
-- `SecureBootRecovery.efi`
-- 多个语言资源目录，例如 `zh-CN`、`zh-TW`
-
-曾尝试围绕 `bootmgfw.efi` 做“trusted for execution”操作，但用户报告问题没有因此解决。由于当时每一步确认画面没有完整记录，暂不把“具体写入了什么 DB 项”视为已确认。
-
-## CSM / Legacy
-
-在已经浏览和拍摄的菜单中未发现 CSM/Legacy 开关。
-
-当前现象也显示固件正在以 UEFI 方式调用 Windows Boot Manager，但“没有看到 CSM”不等于证明固件代码里绝对没有兼容模块。
+此前浏览的 BIOS 菜单未发现 CSM/Legacy 选项，这只是检查范围内未见。目录页面差异只记录实际所在层级，不据此诊断重装造成文件异常。

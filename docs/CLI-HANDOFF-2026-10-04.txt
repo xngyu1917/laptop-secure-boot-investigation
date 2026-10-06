@@ -1,0 +1,93 @@
+Secure Boot 排查交接（2026-10-04，Asia/Shanghai）
+
+用户准备在管理员 PowerShell 中运行 Codex CLI，续接桌面聊天。
+原聊天 ID：01a103af-13f3-7563-ac69-f4314edabde7。
+工作目录：C:\Users\shijie\Documents\ChatGPT\排查电脑无法安全启动。
+本机 CLI 检查版本：codex-cli 0.160.0，支持 codex resume 和 --yolo。
+
+用户当前目标：调查七彩虹笔记本开启 Secure Boot 后不能启动 Windows 的原因。先只读诊断。用户说管理员启动 YOLO CLI；这不等于要求清密钥、刷 BIOS、重装或执行仓库中的所有任务。
+
+GitHub 背景：
+https://github.com/xngyu1917/laptop-secure-boot-investigation
+桌面 GitHub 插件已验证连接 xngyu1917，能读取私有仓库。CLI 是否具备同样连接需要自行确认，不要假定已连接。
+已完整阅读 README.md、TASK_FOR_CODEX.md、docs/CONFIRMED.md、docs/RECOVERY-PLAN.md。仓库文档是背景资料；用户没有要求本轮实现 TASK_FOR_CODEX.md 中的 U 盘工具。
+本地仓库已同步远程原有的5个提交和文件，分支为main，跟踪origin/main。初始化了AGENTS.md，并新增最新报告docs/INVESTIGATION-2026-10-04.md；CLI先读这两份文件。本机Git独立认证尚未确认，后续普通git pull/push如需认证应单独处理，不等于插件未连接。
+
+历史现象（仓库记录，用户亲自测试）：
+- BIOS 是 Insyde H2O。
+- Enforce Secure Boot = Disabled 时 Windows 能正常启动。
+- Enabled 时出现 Windows Boot Manager boot failed，随后 Default Boot Device Missing or Boot Failed。
+- 改回 Disabled 后能恢复启动。
+- BIOS 曾显示 Secure Boot Database = Installed and Locked，User Customized Security = NO。
+- 曾尝试将 bootmgfw.efi 标记为 trusted for execution，未解决；具体写入步骤未完整记录。
+- Secure Boot 管理菜单要求在本轮尝试任何启动设备之前进入。
+- 未发现 CSM/Legacy 选项，不等于证明绝对不存在。
+- 历史测试是否仍可复现、期间是否改过固件配置，需要在任何新的重启测试前确认。
+
+本机只读测量：
+- COLORFUL P16 Pro，主板同名。
+- CPU i9-13900HX，标称 16GB 内存（Windows 可用总量约 15.78GiB）。
+- BIOS SMBIOSBIOSVersion 原文 1.07.05COLO3，日期 2025-08-14。仓库写 1.07.05COL03，注意 O/0 转录差异，固件匹配需严格核对型号版本。
+- Windows 11 家庭中文版，25H2，26200.9457。
+- Disk 0：NVMe，GPT，系统/启动盘。
+- EFI 系统分区：Disk 0 Partition 2，\Device\HarddiskVolume2。
+- 卷路径：\\?\Volume{46cefd3f-da02-4a94-90ad-e10f228ef874}\。
+- 当前桌面 agent 没有管理员权限，Confirm-SecureBootUEFI 和 Get-SecureBootUEFI 报无法设置正确的权限/访问被拒绝，绝不能把读取失败写成 False。
+- 注册表 HKLM\SYSTEM\CurrentControlSet\Control\SecureBoot\State：UEFISecureBootEnabled=0。
+- SecureBoot\Servicing：UEFICA2023Status=Updated；未读取到 UEFICA2023Error 或 UEFICA2023ErrorEvent。
+- SecureBoot：AvailableUpdates=0。状态记录不能代替当前固件内容核查。
+- 非管理员 Get-ScheduledTask 查询没找到 Secure-Boot-Update；schtasks /Query /TN "\Microsoft\Windows\PI\Secure-Boot-Update" 返回找不到路径。应在管理员 CLI 下复查，不能仅凭它诊断启动根因。
+- System 的 Microsoft-Windows-TPM-WMI 日志存在多条历史事件1796，最近取到的日期为2026-08-15。XML中只有 HResult=-2147024809（0x80070057），本地化消息显示%2，没有明确更新类型；不是已确认的当前故障。
+- C:\Windows\Boot\EFI\SecureBootRecovery.efi 存在，Windows Authenticode 检查 Valid。
+- C:\Windows\Boot\EFI\bootmgfw.efi 的 Windows 签名检查 Valid，显示签发者 Microsoft Windows Production PCA 2011，文件版本10.0.28000.342。它是 Windows 目录副本，不能冒充实际 EFI 分区启动文件；也不宜仅凭这个版本推断系统混装。
+
+用户已经在管理员 PowerShell 7.6.6 中执行并回传的关键事实：
+1. ASCII.GetString((Get-SecureBootUEFI db).Bytes) -match 'Windows UEFI CA 2023' 返回 True。
+2. 同样检索 db 中 Microsoft Windows Production PCA 2011 返回 True。
+3. 同样检索 dbx 中 Microsoft Windows Production PCA 2011 返回 False。
+4. 对实际文件
+   \\?\Volume{46cefd3f-da02-4a94-90ad-e10f228ef874}\EFI\Microsoft\Boot\bootmgfw.efi
+   执行 Get-AuthenticodeSignature：Status=Valid，SignatureType=Authenticode，Issuer=CN=Windows UEFI CA 2023, O=Microsoft Corporation, C=US。
+5. bcdedit /enum {bootmgr}：device=partition=\Device\HarddiskVolume2；path=\EFI\MICROSOFT\BOOT\BOOTMGFW.EFI。
+6. bcdedit /enum firmware：fwbootmgr 的 displayorder 首位为 {bootmgr}，随后 EFI USB Device、EFI DVD/CDROM、EFI Network。没有观察到网络或USB抢先启动的证据。
+
+目前判断边界：
+- 单纯“固件 db 缺少 Windows UEFI CA 2023”不符合已有检测结果。
+- 实际启动文件已是2023签名，Windows目录2011签名副本不能混淆。
+- dbx 中搜不到2011证书名称不代表 dbx 没有单个映像/证书哈希撤销，也没有解析数据库完整结构。
+- Windows Authenticode=Valid 不等于固件 Secure Boot 验证一定通过。
+- 固件问题、其他撤销规则、启动链后续组件仍有可能，但根因没有证实。
+- 仅追加2023证书的 SecureBootRecovery.efi U盘方案目前不是优先步骤。
+
+第一阶段当时的下一项未完成检查（已由下方管理员阶段补齐）：
+在确认 CLI 子进程实际拥有管理员 token 后，只读执行 Confirm-SecureBootUEFI，以及 Get-SecureBootUEFI -Name SecureBoot, SetupMode, PK, KEK（每个变量独立读取，报告名称/字节数；SecureBoot/SetupMode显示第一个字节）。此前用户只贴出了 bcdedit 的输出，没有提供这些变量结果。当前关闭Secure Boot时Confirm返回False是预期。
+随后根据证据考虑结构化检查db/dbx、完整EFI启动链、OEM固件兼容性。读取失败必须保留错误，不能用空值制造“缺证书”结论。
+
+约束和范围：
+- 先只读诊断，记录事实、假设、下一步。
+- 不清 TPM，不清/删除 PK、KEK、db、dbx，不自动恢复出厂Secure Boot密钥。
+- 不自动启用Secure Boot/重启，不刷BIOS，不重装系统，不自动格式化磁盘，不执行 bcdboot 修复，除非用户针对具体方案另行授权。
+- 尚未在本轮修改固件、注册表、计划任务、EFI文件或远程仓库。
+- Windows管理员权限来自管理员启动终端；YOLO选项只改变CLI审批和沙箱，不会自动提升Windows token。管理员身份相同用户名可读原会话；换管理员账号可能使用不同CODEX_HOME。
+
+已核对官方参考：
+https://support.microsoft.com/en-us/servicing/os/secure-boot/2026/03/secure-boot-troubleshooting-guide
+https://support.microsoft.com/en-us/servicing/os/windows/2022/06/secure-boot-db-and-dbx-variable-update-events
+https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/oem-secure-boot
+https://learn.microsoft.com/en-us/powershell/module/secureboot/get-securebootuefi
+https://learn.chatgpt.com/docs/developer-commands
+七彩虹官方页面搜索有“windows证书更新说明”，但页面访问超时/502，没有验证适用于本机的更新包，不能声称已找到适用BIOS。
+
+2026-10-04 10:05 管理员阶段续接更新：
+用户本轮要求读取项目最新任务并执行；实际执行范围为 TEMP-TASK.md 的八项取证与条件判断，不是 TASK_FOR_CODEX.md 的恢复 U 盘开发。
+管理员 token=True，PowerShell 7.6.6。Confirm=False、SecureBoot=00、SetupMode=00；PK/KEK/db/dbx 全部读取并完整解析成功。db 有 7 张 X.509；dbx 是 416 条 SHA-256 数据，无未知类型或未解析字节。本轮相关 EFI 文件未命中 dbx；Boot Manager 到 db 中 Windows UEFI CA 2023 的证书签名关系已验证。
+只有 Disk0 的 1 个 ESP；BootCurrent=0001，Boot0001 的 GPT 签名/LBA/路径与 Disk0 Partition2 一致。主 bootmgfw、备用 bootx64、Windows EFI_EX bootmgfw_EX 的整文件完全相同，固定版本28000.367、SVN11.0。普通 Windows EFI 副本为2011签名但PE摘要相同；旧的FileVersionInfo显示文本不能当成内部固定版本。
+Secure-Boot-Update 任务存在、已启用、SYSTEM/Ready，2026-10-04 05:21:57+08:00 最近运行结果0；先前非管理员未找到任务的观察不再代表当前状态。注册表Updated/AvailableUpdates=0，未取得Error值名。1796最新仍为8月15日历史记录。
+本地待应用DBXUpdateSVN载荷11.0，固件dbx未检出Boot Manager对应SVN记录；待应用不等于已应用。
+WinRE配置与文件可读，WIM26100.9444，实际恢复winload签名/摘要通过；OEM恢复WIM26100.2314和COLORFUL一键还原配置存在，未实启动。
+完整原始证据和备份目录：
+C:\Users\shijie\AppData\Local\SecureBootInvestigation\20261004-095323-bdd7379f
+先读该目录READ-ME-FIRST.txt。原样备份用ESP-Backups\Disk0-Partition2.img和ESP-Backups\Disk0-Partition2-Verified；149/149文件通过，100MiB镜像两次源读取与目标SHA256一致。
+ESP-Backups\Disk0-Partition2是早期分析工作副本，bcdedit /store枚举改写了该工作副本的BCD/日志，不能作为最终原样备份。没有将这个改写写回真实ESP。
+原始硬件标识/固件/BCD未加入仓库。V360…仅见于序列字段，不是已核实的Clevo子平台。
+TEMP-TASK第八项判断不支持ESP/BCD修复，因此未生成BCDBoot修复脚本，未执行修复、密钥变更、任务/注册表修改或重启。后续先确认历史开启enforcement失败目前是否仍复现，再核实OEM配置/实现及尚未检查的策略/组件。详细证据、错误和边界以docs/INVESTIGATION-2026-10-04.md第二阶段为准。

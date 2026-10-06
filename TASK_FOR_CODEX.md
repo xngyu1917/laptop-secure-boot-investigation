@@ -1,4 +1,6 @@
-# Codex 任务：制作安全的 Secure Boot Recovery U 盘工具
+# Codex 历史任务提案：制作安全的 Secure Boot Recovery U 盘工具
+
+> 2026-10-06：这是历史开发提案，不是当前待执行指令。当前用户授权仅为整理本轮现场记录；本轮没有制作或运行此恢复工具。先读 `AGENTS.md` 和 `docs/INVESTIGATION-2026-10-06.md`，只有用户另行请求并核实适用条件后，才实施下方提案。
 
 请先完整阅读 README.md、docs/CONFIRMED.md、docs/RECOVERY-PLAN.md。
 

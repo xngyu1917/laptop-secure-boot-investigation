@@ -1,8 +1,10 @@
-# Secure Boot 现场复测更新
+# Secure Boot 现场复测更新（2026-10-05 历史记录）
+
+> 2026-10-06 编辑提示：本页保留当时的现场观察与分析，其中“优先怀疑固件”等排序是历史意见，不是接手者的诊断前提。新的清除／恢复／手工信任结果见 [10-06 现场记录](INVESTIGATION-2026-10-06.md)，当前事实摘要见 [README](../README.md)。不要把本页“尚未执行清除”等状态当成现在的状态，也不要把10-04静态结果当成新配置下的复测。
 
 日期：2026-10-05（America/La_Paz）。本页只记录 2026-10-04 管理员静态取证之后的新现场结果。此前完整静态调查见 [INVESTIGATION-2026-10-04.md](INVESTIGATION-2026-10-04.md)。
 
-## 当前结论
+## 当时的分析（历史意见）
 
 根因仍未被唯一确定，但故障范围已经明显收窄。
 
@@ -77,7 +79,7 @@ Administer Secure Boot 页面在保存/重启前后可见：
 
 这是一条新的关键证据。它说明故障不再只绑定于内部 SSD 上的单一 Windows Boot Manager 路径；另一个独立 EFI 启动入口在 enforcement 开启时也被固件拒绝。
 
-### 解释边界
+### 当时的解释边界
 
 这组结果强烈降低以下假设的优先级：
 
@@ -151,9 +153,9 @@ BIOS 直接显示 DB Signature List，共 7 个 PKCS7 条目：
 
 这不是新的 Windows 故障，也不是 USB 故障本身。
 
-## 7. 当前工作假设排序
+## 7. 当时提出的工作假设排序（不作为当前排序）
 
-### 第一优先级
+### 当时的第一优先级
 
 **OEM/Insyde 固件实际执行 Secure Boot 验证时的兼容性或状态问题。**
 
@@ -164,13 +166,13 @@ BIOS 直接显示 DB Signature List，共 7 个 PKCS7 条目：
 - 当前变量组合在 Windows 侧看起来结构有效，但固件实际 enforcement 行为异常；
 - 该 BIOS/EC 版本存在 OEM 已知修复。
 
-### 第二优先级
+### 当时的第二优先级
 
 **当前 Secure Boot 固件变量/默认数据库状态需要 OEM 认可的恢复或重新初始化。**
 
 这与“Erase all Secure Boot Settings”不同。是否应执行 `Restore Secure Boot to Factory Settings`，必须先确认本机 BIOS ROM 内置的 factory database 是否包含当前所需 2023 证书，以及 OEM 是否建议这样做。
 
-### 已明显降低优先级
+### 当时认为已降低优先级的项目
 
 - 单纯缺少 Windows UEFI CA 2023；
 - 单纯 BCD/ESP 路径错误；
@@ -179,7 +181,7 @@ BIOS 直接显示 DB Signature List，共 7 个 PKCS7 条目：
 - 直接运行 BCDBoot；
 - 清 TPM。
 
-## 8. 目前不要做
+## 8. 当时的操作限制（不是最新执行状态）
 
 在 OEM 明确答复前，暂不执行：
 
@@ -194,7 +196,7 @@ BIOS 直接显示 DB Signature List，共 7 个 PKCS7 条目：
 
 当前保持 `Enforce Secure Boot = Disabled` 可恢复 Windows 正常使用。
 
-## 9. 下一步：OEM 固件支持
+## 9. 当时提出的 OEM 支持请求
 
 下一步优先联系 COLORFUL，提供以下信息：
 

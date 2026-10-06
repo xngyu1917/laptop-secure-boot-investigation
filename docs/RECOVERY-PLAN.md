@@ -1,6 +1,8 @@
-# 恢复方案（条件性备选）
+# 恢复方案（历史条件性备选，不是当前执行清单）
 
-## 2026-10-05 适用性再次下调
+> 2026-10-06 状态提示：用户本轮已尝试清除、恢复默认和手工信任，仍报告失败；完整事实见 [10-06 现场记录](INVESTIGATION-2026-10-06.md)。本页下方的优先级和操作方案属于此前讨论，不代表已确认根因或最新授权。不能因阅读本页而重复初始化或自动制作／启动恢复工具。`SecureBootRecovery.efi` 在本轮没有运行记录；“恢复默认”也不是运行该工具。
+
+## 2026-10-05 适用性再次下调（历史意见）
 
 新的现场 A/B 已确认：`Enforce Secure Boot = Enabled` 时，不仅内部 Windows Boot Manager 启动失败，独立 EFI USB 也直接 `boot failed`；关闭 enforcement 后两者可启动。BIOS DB 页面同时直接显示 Windows UEFI CA 2023、Microsoft UEFI CA 2023 等证书。
 
@@ -8,13 +10,13 @@
 
 在 OEM 明确建议前，不执行 Erase Keys、删除 DBX、手工 trust 单个 EFI 文件或恢复 factory keys。
 
-## 2026-10-04 适用性更新
+## 2026-10-04 适用性更新（历史意见）
 
 固件 db 已检出 Windows UEFI CA 2023，实际 EFI 分区的 `bootmgfw.efi` 已由该 CA 签发，Windows Authenticode 检查为 `Valid`。因此，本页“追加 2023 证书”的方案目前应降低优先级，不是已经确认适用于本机的修复。
 
 先按 [2026-10-04 管理员调查](INVESTIGATION-2026-10-04.md) 完成只读诊断。以下保留微软恢复工具的历史方案；只有进一步证据确认适用、且用户授权具体恢复操作后再执行。
 
-## 目标
+## 历史方案目标
 
 优先采用可逆、最小破坏的方式恢复 Secure Boot 对 Windows Boot Manager 的信任，而不是直接清空 TPM 或整套 Secure Boot keys。
 
@@ -30,7 +32,7 @@
 3. 从受影响设备启动该 U 盘；
 4. 恢复工具会把 **Windows UEFI CA 2023** 加入 Secure Boot DB。
 
-官方：
+历史方案引用的官方资料（执行前须重新核对适用条件）：
 https://support.microsoft.com/en-us/servicing/os/secure-boot/2026/03/secure-boot-troubleshooting-guide
 
 ## 制作 U 盘的安全原则
@@ -56,7 +58,7 @@ Codex 工具必须遵守：
 - 不执行 `Erase all Secure Boot Settings`。
 - 不执行 `Restore Secure Boot to Factory Settings`，除非后续证据明确要求且已确认 OEM factory DB 包含所需新证书。
 
-## 受影响笔记本上的流程
+## 受影响笔记本上的历史拟议流程
 
 1. BIOS 保持 `Enforce Secure Boot = Disabled`。
 2. 插入恢复 U 盘。
@@ -67,7 +69,7 @@ Codex 工具必须遵守：
 7. 将 `Enforce Secure Boot = Enabled`。
 8. F10 保存并测试 Windows Boot Manager。
 
-## 如果仍失败
+## 历史方案中的失败后检查
 
 先关闭 Enforce，恢复 Windows 启动，再收集证据，不要继续“全开/全清”：
 

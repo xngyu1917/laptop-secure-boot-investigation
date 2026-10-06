@@ -1,10 +1,17 @@
 Secure Boot 排查交接：2026-10-06
 
-当前任务与状态
+新增 USB 实测补充（2026-10-06，Codex）
+用户另行授权补充并提交当前安装 U 盘的信息。详见 docs/USB-CHECK-2026-10-06.md。
+在当前 ASUS 台式机只读检查：Disk 2 为 USB/MBR、VendorCo ProductCode，G: 为 ESD-USB/FAT32。默认 EFI\\Boot\\bootx64.efi 与根目录 bootmgr.efi 的 PE 证书表各1项、嵌套签名属性0项，签发者均为 Windows Production PCA 2011；不是2023默认入口。六个可读取EFI文件均返回 Authenticode Valid，完整整文件哈希已记入新报告。
+当前进程非管理员，BCD读取返回 Access is denied；没有检查boot.wim完整启动链、没有改写U盘、没有启动测试，也没有重测COLORFUL固件。不能默认当前这只盘就是10-05的旧盘且内容未变；2023安装盘对照仍无结果。
+以下交接内容是先前BIOS文档整理的历史状态，不把新USB检查描述为笔记本已修复或固件已重新取证。
+
+此前 BIOS 记录整理任务与状态
 用户要求把本轮 BIOS 操作按事实写进 GitHub，不给根因排优先级，不让接手者沿用前一位 AI 的猜测。本次是文档整理；没有在笔记本上运行命令、导出新变量或执行修复。
 
 先读
 README.md
+docs/USB-CHECK-2026-10-06.md
 AGENTS.md
 docs/INVESTIGATION-2026-10-06.md
 docs/CONFIRMED.md

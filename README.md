@@ -2,7 +2,9 @@
 
 一台 COLORFUL P16 Pro 的安全启动排查记录。**问题尚未解决，根因尚未确定。** 首页只汇总做过什么、观察到什么以及证据缺口，不给原因排优先级。
 
-最新现场记录：[2026-10-06：清除、恢复默认与手工信任测试](docs/INVESTIGATION-2026-10-06.md)。接手前同时阅读 [AGENTS.md](AGENTS.md) 和 [CLI-HANDOFF.txt](CLI-HANDOFF.txt)。
+新增实测：[2026-10-06：Codex 只读检查当前安装 U 盘](docs/USB-CHECK-2026-10-06.md)。当前 G: 默认 UEFI 入口已确认是单一 2011 签名；未进行本轮实际启动，也未确认与旧 USB 测试的身份及内容连续一致。
+
+最新 BIOS 现场记录：[2026-10-06：清除、恢复默认与手工信任测试](docs/INVESTIGATION-2026-10-06.md)。接手前同时阅读 [AGENTS.md](AGENTS.md) 和 [CLI-HANDOFF.txt](CLI-HANDOFF.txt)。
 
 ## 操作与结果
 
@@ -10,6 +12,7 @@
 |---|---|---|---|
 | 既往 Windows／USB 对照，见 10-05 报告 | 分别关闭、开启安全启动；用户报告已重装过 Windows | 关闭时内部 Windows 和该安装 USB 可启动；开启时两者出现启动失败；重装未解决用户所述问题 | 旧 USB 的实际入口、签名版本及制作方式未完整固定；不等于所有 USB 或所有签名均失败 |
 | 10-04 管理员静态检查 | 读取当时的启动项、文件、密钥数据库与日志 | 报告记录路径一致、所检查文件签名／摘要通过、未匹配当时解析的 dbx 条目 | 这是当日的检查，不是本轮清除／恢复／追加后的重新测量 |
+| 当前安装 USB 静态检查（Codex） | 在另一台 ASUS 台式机只读枚举 G: FAT32 USB 并检查 EFI 签名与整文件哈希 | 默认入口 bootx64.efi 与根目录 bootmgr.efi 均仅有一份 2011 签名，无嵌套 2023 签名 | BCD 读取被拒绝；未检查 boot.wim 完整链；未新做启动对照；不能直接替代旧 USB 测试的身份确认 |
 | 本轮清除安全启动设置 | 将 `Erase all Secure Boot Settings` 设为 Enabled，保存重启 | 照片显示 Database=Unlocked、Status=Disabled、User Customized Security=YES；Enforce 灰色，Erase 回到 Disabled | 未在清除后逐项导出数据库或读取 SetupMode；不称为整个 BIOS／所有固件变量已重置 |
 | 本轮恢复默认后测试 | 按 `Restore Secure Boot to Factory Settings` 流程恢复；用户报告重启后开关已自动开启 | 出现 `Windows Boot Manager boot failed.`；随后 DB 页面仍显示原先那 7 个证书名称，包括 Windows UEFI CA 2023 | 名称相同不代表完整字节、证书指纹及所有策略相同；没有完成恢复前后原始数据比对 |
 | 本轮单文件手工信任 | 在文件浏览器选中 `EFI\Microsoft\Boot\bootmgfw.efi`，用户确认点击 Yes，再测试 | 用户报告失败；之后重进 BIOS 的 DB 照片可见新增第 08 条 SHA256 | 证明出现登记项，不证明固件执行时已放行，也未完成新条目与当前实际启动文件的完整摘要匹配 |
@@ -33,10 +36,11 @@
 
 ## 文档索引
 
+- [当前安装 U 盘的 Codex 实测](docs/USB-CHECK-2026-10-06.md)：磁盘与 FAT32 卷、EFI 签名、完整文件哈希、读取错误和测试边界。
 - [最新现场记录](docs/INVESTIGATION-2026-10-06.md)：操作顺序、照片与用户反馈的区别、尚未验证的内容。
 - [已观察事实索引](docs/CONFIRMED.md)：按来源与日期归纳，不混用历史值和最新状态。
 - [10-05 历史记录](docs/INVESTIGATION-2026-10-05.md)：Windows／USB 对照及当时的讨论；其中原因排序是历史意见，不作为当前诊断前提。
 - [10-04 管理员报告](docs/INVESTIGATION-2026-10-04.md)：当时的完整静态取证、读取错误及备份说明。
 - [历史恢复方案](docs/RECOVERY-PLAN.md)、[历史工具提案](TASK_FOR_CODEX.md)、[10-04 已完成任务](TEMP-TASK.md)：不是自动执行清单。
 
-本轮仓库更新仅整理文字记录，没有连接受影响电脑执行诊断或修复。照片原件未上传仓库；不要提交设备恢复密钥、完整硬件标识或未经审查的原始系统数据。
+10-06 BIOS 现场记录仅整理文字，没有连接受影响电脑执行诊断或修复。随后 Codex 在当前 ASUS 台式机只读检查了插着的安装 USB，详见新增实测记录；没有写入 U 盘或在笔记本执行新启动测试。照片原件未上传仓库；不要提交设备恢复密钥、完整硬件标识或未经审查的原始系统数据。

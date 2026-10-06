@@ -1,52 +1,44 @@
-Secure Boot 排查交接：2026-10-06
+Secure Boot 排查交接：2026-10-07
 
-新增 USB 实测补充（2026-10-06，Codex）
-用户另行授权补充并提交当前安装 U 盘的信息。详见 docs/USB-CHECK-2026-10-06.md。
-在当前 ASUS 台式机只读检查：Disk 2 为 USB/MBR、VendorCo ProductCode，G: 为 ESD-USB/FAT32。默认 EFI\\Boot\\bootx64.efi 与根目录 bootmgr.efi 的 PE 证书表各1项、嵌套签名属性0项，签发者均为 Windows Production PCA 2011；不是2023默认入口。六个可读取EFI文件均返回 Authenticode Valid，完整整文件哈希已记入新报告。
-当前进程非管理员，BCD读取返回 Access is denied；没有检查boot.wim完整启动链、没有改写U盘、没有启动测试，也没有重测COLORFUL固件。不能默认当前这只盘就是10-05的旧盘且内容未变；2023安装盘对照仍无结果。
-以下交接内容是先前BIOS文档整理的历史状态，不把新USB检查描述为笔记本已修复或固件已重新取证。
+根因未确定，不给原因排优先级。先读 README.md、docs/INVESTIGATION-2026-10-07.md、AGENTS.md、docs/CONFIRMED.md。
 
-此前 BIOS 记录整理任务与状态
-用户要求把本轮 BIOS 操作按事实写进 GitHub，不给根因排优先级，不让接手者沿用前一位 AI 的猜测。本次是文档整理；没有在笔记本上运行命令、导出新变量或执行修复。
+来源与最新状态
+用户确认当前连接的就是受影响的 COLORFUL 本机，并反馈关闭安全启动后可正常启动。用户明确授权 Codex 自行运行已准备的管理员只读采集脚本，随后要求将补充提交 GitHub。
+采集结束时间 2026-10-07T04:02:56.6731208+08:00，采集内 Administrator=True。本机 P16 Pro，BIOS 1.07.05COLO3，Windows 构建26300；先前本轮注册表读到完整26300.9457、26H2。
+Confirm-SecureBootUEFI 成功返回 False；SecureBoot=00、SetupMode=00。当前关闭状态已经有新实测和用户反馈，不继续沿用10-06的“最后状态未知”。
 
-先读
-README.md
-docs/USB-CHECK-2026-10-06.md
-AGENTS.md
-docs/INVESTIGATION-2026-10-06.md
-docs/CONFIRMED.md
+新实测
+1. 当前PK/KEK/db/dbx=844/3066/9674/19996字节；X.509数分别1/2/7/0；db另含7条SHA256，dbx含416条SHA256。成功读取的当前和默认数据库全部解析到末尾。
+2. PK、KEK、dbx分别与当前PKDefault、KEKDefault、dbxDefault原始字节相同。db前9310字节等于dbDefault，随后一个364字节列表含7条SHA256。不是整个固件恢复证明，也不是前次恢复前后快照。
+3. 当前唯一可枚举ESP为Disk0 Partition1、200MiB，已存在卷路径映射为\Device\HarddiskVolume1；BCD Boot Manager指向该设备的\EFI\Microsoft\Boot\bootmgfw.efi。没有读取原始BootCurrent/Boot####。
+4. 当前ESP主bootmgfw.efi和备用bootx64.efi整文件SHA256相同，与Windows EFI_EX副本相同；内嵌签发者为Windows UEFI CA 2023。本机Get-AuthenticodeSignature选择Catalog，其2011显示不能替代内嵌签名检查。
+5. 本次10个EFI路径的CMS签名、独立PE摘要比较及签名者到db对应CA的直接证书签名核对通过，所查PE摘要均未匹配当前dbx。
+6. 5个ESP路径对应4种PE摘要，已与当前db的完整允许项独立匹配：主/备用启动器、bootmgr.efi、memtest.efi、SecureBootRecovery.efi。其余3条SHA256尚未映射到当前文件，不默认就是特定.mui。
+7. 主/备用启动器完整PE摘要为F235CD21C919E05DA1218E8D13424F4BF2FEFFBB818E080666F93997FE26823A。这是新读取/计算与新db匹配，不补全旧截图省略值。
 
-本轮操作顺序
-1. 用户将 Erase all Secure Boot Settings 设为 Enabled，保存重启。
-2. 照片显示 Secure Boot Database=Unlocked、Status=Disabled、User Customized Security=YES；Enforce 灰色；Erase 回到 Disabled。未逐项导出确认四库为空，未读取 SetupMode。
-3. 用户按 Restore Secure Boot to Factory Settings 流程恢复；报告重启后安全启动已自动开启。随后照片显示 Windows Boot Manager boot failed 和后续默认设备失败。
-4. 用户报告已关掉安全启动。恢复后的 DB 照片显示 7 个证书名称，其中仍有 Windows UEFI CA 2023。没有进行原始字节／指纹前后比较。
-5. 在信任文件浏览器先进入 EFI\Boot，看到 bootx64.efi；返回上一级看到 Boot 和 Microsoft，再进入 EFI\Microsoft\Boot，选中 bootmgfw.efi。照片和文字记录能区分这两个目录，但本轮没有重新采集 Boot#### 与分区标识。
-6. 用户报告确认添加 bootmgfw.efi 的 hash，开启后仍失败。再次进入 BIOS，DB 照片出现第08条 SHA256，前缀 F2 35 CD 21 C9 19 E0 5D A1 21 8E 8D 13 42 4F ...；不是完整导出值。
-7. 用户随后明确补充：重复提示对应 `EFI\\Boot\\bootx64.efi` 与先前已加入的 `EFI\\Microsoft\\Boot\\bootmgfw.efi`，两者哈希相同；10-04 历史报告也曾记录两者当时整文件 SHA-256 相同。本轮没有重新导出完整值或摘要口径。
-8. 用户继续做扩大白名单测试：除 `bootmgfw.efi` 外，还信任 `bootmgr.efi`、`memtest.efi`、`SecureBootRecovery.efi`，并信任 `zh-CN` 下可见的所有 `.mui`；`bootx64.efi` 因重复哈希没有新增独立条目。最后 DB 照片可见前7条证书及08～14共7条 SHA256；仍不能把7条逐项绑定到7个具体文件。
-9. 再测试后用户只回复“失败”。没有本次新错误截图或日志。不能补写为所有阶段都返回了已独立拍摄的同一错误。
+历史连续性与限制
+10-04记录为Windows26200.9457、5分区、ESP Partition2/100MiB；现在布局和构建有差异。变更时间与原因未核实，旧Boot0001、恢复分区与备份不能自动当成当前。
+10-06清除/恢复/追加操作仍保留为当时照片和反馈。清除阶段空库证明、恢复操作前后快照仍缺；当前默认比较不能倒推过去。
+10-06在另一台ASUS读取的USB默认入口是单一2011签名；没有本次新USB测试，也未确认与10-05旧盘身份及内容连续一致。2011/2023安装介质配对仍无结果。
 
-最新状态限制
-最后一张 DB 照片在末次失败前。此后是否关回安全启动、进入 Windows、清除手工条目，尚未收到确认。历史关闭安全启动可进 Windows，不等于末次之后已重新验证。不要自行初始化来恢复“干净状态”。
+读取错误
+最初非管理员Confirm读取访问拒绝；后续管理员成功值单独记录。
+dbt/dbtDefault返回当前未定义变量0xC0000100；不扩大为所有OEM策略为空。
+所选注册表属性缺失、版本显示差异和证书解析库警告详见新报告，不解释成根因。
 
-历史数据
-10-04 管理员报告曾记录：唯一 ESP 和 Boot0001/BCD 对应；13个EFI路径的相关签名／摘要检查通过；PK/KEK/db/dbx=844/3066/9310/19996字节，db含7张证书，dbx含416条SHA256；所检查对象未匹配当时dbx。它们是历史测量，未在本轮恢复及追加后重测。
-10-05 记录 Windows 重装未解决用户所述现象，以及同一安装USB的OFF可启动／ON失败对照。USB实际签名版本与完整制作链未固定。
-已有原始取证路径与备份限制详见 docs/INVESTIGATION-2026-10-04.md 和原封保留的 docs/CLI-HANDOFF-2026-10-04.txt。本次没有检查本地备份是否仍在、也没有覆盖备份。旧交接里的会话ID、CLI版本、权限与“当前”状态都是历史信息。
+尚缺（不是自动执行清单）
+- 新的ON启动失败返回码/执行跟踪，固件是否实际放行及失败阶段。
+- 余下3条允许哈希映射、原始BootCurrent/Boot####与完整后续策略/驱动检查。
+- 前次清除阶段原始数据与恢复前后快照。
+- 旧USB身份连续性、核实签名的实际介质启动配对。
+- 准确子型号及适用官方固件包；旧备份是否仍存在/对应当前。
+本次没有开启安全启动、重启、运行恢复程序、改密钥、清TPM、刷BIOS、修复EFI/BCD或重装。静态通过不等于固件运行时放行。
 
-尚缺的数据（不是原因排行榜，也不是自动执行任务）
-- 最终开关状态、能否进入Windows、是否有新增操作。
-- 本轮之后的当前启动项／分区／实际文件身份与完整数据库采集；与历史数据比较时注明采集间隔中的变更。
-- 新增db摘要与当次实际启动文件的独立对应；当前dbx及相关策略的读取范围。
-- 末次失败的准确提示或返回状态；不凭 boot failed 定位执行阶段。
+本地证据
+本聊天outputs/SecureBootEvidence-20261007-040246-ba72b6/保存report.json、firmware/、files/、embedded-signatures.json、analysis.json、volume-mapping.json。
+本次未上传原始变量、EFI副本、完整设备/卷标识、凭据或恢复密钥；旧备份没有被覆盖。
 
-仅讨论、未完成
-核实实际签名的Win10安装U盘启动对照；恢复前后数据库逐字节比较；运行SecureBootRecovery.efi；再次重装或刷BIOS。本轮没有这些新的执行证据。
-
-不要继承的结论
-“已写入允许名单”不是“固件已经执行放行”。
-“清除并恢复后仍失败”不是“证明BIOS有bug”。
-“名称都在”不是“当前所有证书、撤销与启动链全部验证通过”。
-“新增7条SHA256”不是“7个确定文件或所有启动文件均受信任”。
-根因保持未确定。
+历史入口
+docs/CLI-HANDOFF-2026-10-06.txt原样保存本次更新前的交接，里面的“本轮/当前/未知”只属于旧日期。
+docs/CLI-HANDOFF-2026-10-04.txt和各日期调查报告保留历史来源。旧恢复计划和任务不是自动授权。
+用户最新明确指令优先；本次文档补充不自动授权下一轮电脑修复。
